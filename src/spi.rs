@@ -1,12 +1,14 @@
 use crate::hal;
 use core::arch::asm;
+use embedded_hal::spi::{Mode, Phase, Polarity};
 use hal::blocking::spi::{Transfer, Write};
-use hal::digital::v2::{InputPin, OutputPin};
+use hal::digital::v2::{InputPin, OutputPin, PinState};
 
 pub struct Spi<SCK, MISO, MOSI> {
-    sck: Option<SCK>,
+    sck: SCK,
     miso: Option<MISO>,
     mosi: Option<MOSI>,
+    mode: Mode,
     delay: usize,
 }
 
@@ -16,11 +18,18 @@ where
     MOSI: OutputPin,
     MISO: InputPin,
 {
-    pub fn new(sck: Option<SCK>, miso: Option<MISO>, mosi: Option<MOSI>, delay: usize) -> Self {
+    pub fn new(sck: SCK, miso: Option<MISO>, mosi: Option<MOSI>, mode: Mode, delay: usize) -> Self {
+        let mut sck = sck;
+        match mode.polarity {
+            Polarity::IdleLow => sck.set_low().ok(),
+            Polarity::IdleHigh => sck.set_high().ok(),
+        };
+
         Self {
             sck,
             miso,
             mosi,
+            mode,
             delay,
         }
     }
@@ -34,6 +43,7 @@ where
 {
     type Error = ();
     fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+        let sck = &mut self.sck;
         for word in words {
             for bit in (0..8).rev() {
                 let mask = 1 << bit;
@@ -45,15 +55,22 @@ where
                     };
                 }
 
-                if let Some(sck) = self.sck.as_mut() {
-                    sck.set_high().ok();
-                    for _ in 0..self.delay {
-                        unsafe { asm!("nop") };
-                    }
-                    sck.set_low().ok();
-                    for _ in 0..self.delay {
-                        unsafe { asm!("nop") };
-                    }
+                match self.mode.polarity {
+                    Polarity::IdleLow => sck.set_high().ok(),
+                    Polarity::IdleHigh => sck.set_low().ok(),
+                };
+
+                for _ in 0..self.delay {
+                    unsafe { asm!("nop") };
+                }
+
+                match self.mode.polarity {
+                    Polarity::IdleLow => sck.set_low().ok(),
+                    Polarity::IdleHigh => sck.set_high().ok(),
+                };
+
+                for _ in 0..self.delay {
+                    unsafe { asm!("nop") };
                 }
             }
         }
@@ -70,6 +87,7 @@ where
     type Error = MISO::Error;
 
     fn transfer<'w>(&mut self, words: &'w mut [u8]) -> Result<&'w [u8], Self::Error> {
+        let sck = &mut self.sck;
         for word in words.as_mut() {
             for bit in (0..8).rev() {
                 let mask = 1 << bit;
@@ -81,22 +99,20 @@ where
                     };
                 }
 
-                if let Some(sck) = self.sck.as_mut() {
-                    sck.set_high().ok();
-                    for _ in 0..self.delay {
-                        unsafe { asm!("nop") };
-                    }
+                sck.set_high().ok();
+                for _ in 0..self.delay {
+                    unsafe { asm!("nop") };
+                }
 
-                    if let Some(miso) = self.miso.as_mut() {
-                        match miso.is_high()? {
-                            true => *word |= mask,
-                            false => *word &= !mask,
-                        }
+                if let Some(miso) = self.miso.as_mut() {
+                    match miso.is_high()? {
+                        true => *word |= mask,
+                        false => *word &= !mask,
                     }
-                    sck.set_low().ok();
-                    for _ in 0..self.delay {
-                        unsafe { asm!("nop") };
-                    }
+                }
+                sck.set_low().ok();
+                for _ in 0..self.delay {
+                    unsafe { asm!("nop") };
                 }
             }
         }
