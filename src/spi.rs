@@ -99,7 +99,11 @@ where
                     };
                 }
 
-                sck.set_high().ok();
+                match self.mode.polarity {
+                    Polarity::IdleLow => sck.set_high().ok(),
+                    Polarity::IdleHigh => sck.set_low().ok(),
+                };
+
                 for _ in 0..self.delay {
                     unsafe { asm!("nop") };
                 }
@@ -110,7 +114,12 @@ where
                         false => *word &= !mask,
                     }
                 }
-                sck.set_low().ok();
+
+                match self.mode.polarity {
+                    Polarity::IdleLow => sck.set_low().ok(),
+                    Polarity::IdleHigh => sck.set_high().ok(),
+                };
+
                 for _ in 0..self.delay {
                     unsafe { asm!("nop") };
                 }
