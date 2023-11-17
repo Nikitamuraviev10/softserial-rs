@@ -40,8 +40,8 @@ where
 
                 if let Some(mosi) = self.mosi.as_mut() {
                     match word & mask {
-                        0 => mosi.set_high().ok(),
-                        _ => mosi.set_low().ok(),
+                        0 => mosi.set_low().ok(),
+                        _ => mosi.set_high().ok(),
                     };
                 }
 
@@ -76,8 +76,8 @@ where
 
                 if let Some(mosi) = self.mosi.as_mut() {
                     match *word & mask {
-                        0 => mosi.set_high().ok(),
-                        _ => mosi.set_low().ok(),
+                        0 => mosi.set_low().ok(),
+                        _ => mosi.set_high().ok(),
                     };
                 }
 
