@@ -3,19 +3,20 @@ use core::arch::asm;
 use hal::blocking::spi::{Transfer, Write};
 use hal::digital::v2::{InputPin, OutputPin};
 
-pub struct Spi<I, O> {
-    sck: Option<O>,
-    miso: Option<I>,
-    mosi: Option<O>,
+pub struct Spi<SCK, MISO, MOSI> {
+    sck: Option<SCK>,
+    miso: Option<MISO>,
+    mosi: Option<MOSI>,
     delay: usize,
 }
 
-impl<I, O> Spi<I, O>
+impl<SCK, MISO, MOSI> Spi<SCK, MISO, MOSI>
 where
-    I: InputPin,
-    O: OutputPin,
+    SCK: OutputPin,
+    MOSI: OutputPin,
+    MISO: InputPin,
 {
-    pub fn new(sck: Option<O>, miso: Option<I>, mosi: Option<O>, delay: usize) -> Self {
+    pub fn new(sck: Option<SCK>, miso: Option<MISO>, mosi: Option<MOSI>, delay: usize) -> Self {
         Self {
             sck,
             miso,
@@ -25,10 +26,11 @@ where
     }
 }
 
-impl<I, O> Write<u8> for Spi<I, O>
+impl<SCK, MISO, MOSI> Write<u8> for Spi<SCK, MISO, MOSI>
 where
-    I: InputPin,
-    O: OutputPin,
+    SCK: OutputPin,
+    MOSI: OutputPin,
+    MISO: InputPin,
 {
     type Error = ();
     fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
@@ -59,12 +61,13 @@ where
     }
 }
 
-impl<I, O> Transfer<u8> for Spi<I, O>
+impl<SCK, MISO, MOSI> Transfer<u8> for Spi<SCK, MISO, MOSI>
 where
-    I: InputPin,
-    O: OutputPin,
+    SCK: OutputPin,
+    MOSI: OutputPin,
+    MISO: InputPin,
 {
-    type Error = I::Error;
+    type Error = MISO::Error;
 
     fn transfer<'w>(&mut self, words: &'w mut [u8]) -> Result<&'w [u8], Self::Error> {
         for word in words.as_mut() {
