@@ -1,8 +1,9 @@
 use crate::hal;
 use core::arch::asm;
-use embedded_hal::spi::{Mode, Phase, Polarity};
 use hal::blocking::spi::{Transfer, Write};
-use hal::digital::v2::{InputPin, OutputPin, PinState};
+use hal::digital::v2::{InputPin, OutputPin};
+
+pub use hal::spi::{Mode, Phase, Polarity};
 
 pub struct Spi<SCK, MISO, MOSI> {
     sck: SCK,
